@@ -83,3 +83,136 @@ FROM branches b
 JOIN employees e ON b.branch_id = e.branch_id
 GROUP BY b.branch_number
 HAVING COUNT(e.employee_id) > 5;
+
+-- 11. Top 10 most rented books
+SELECT
+	b.title,
+	COUNT(r.rental_id) AS amount_of_rents,
+    RANK() OVER (ORDER BY COUNT(r.rental_id) DESC) AS rank
+FROM books b
+JOIN book_copies bc ON b.book_id = bc.book_id
+JOIN rentals r ON bc.copy_id = r.copy_id
+GROUP BY b.book_id, b.title
+ORDER BY amount_of_rents DESC
+LIMIT 10;
+
+-- 12. Rank customers by number of rentals
+WITH number_of_rentals AS(
+SELECT
+	m.customer_id,
+	m.name,
+	COUNT(r.rental_id) AS rental_amount
+FROM members m
+JOIN rentals r ON m.customer_id = r.customer_id
+GROUP BY m.customer_id, m.name
+)
+
+SELECT 
+	customer_id,
+	name,
+	rental_amount,
+	DENSE_RANK() OVER(ORDER BY rental_amount DESC) AS customer_rank
+FROM number_of_rentals nor
+ 
+ -- 13. Monthly rentals trend
+WITH monthly_rentals AS (
+    SELECT 
+        DATE_TRUNC('month', rental_date) AS month,
+        COUNT(*) AS rentals_count
+    FROM rentals
+    GROUP BY month
+)
+SELECT 
+    month,
+    rentals_count,
+    LAG(rentals_count) OVER (ORDER BY month) AS previous_month,
+    rentals_count - LAG(rentals_count) OVER (ORDER BY month) AS growth
+FROM monthly_rentals
+ORDER BY month
+
+-- 14. Running total of rentals
+
+SELECT 
+	DATE_TRUNC('month', rental_date) AS month,
+	COUNT(*) AS monthly_rentals,
+	SUM(COUNT(*)) OVER (ORDER BY DATE_TRUNC('month', rental_date)) AS running_total
+FROM rentals
+GROUP BY month
+ORDER BY month
+
+-- 15. Top categories by rentals
+
+SELECT
+	c.category_id,
+	c.name,
+	COUNT(r.rental_id) AS rents_amount
+FROM categories c
+JOIN books b ON c.category_id = b.category_id
+JOIN book_copies bc ON b.book_id = bc.book_id
+JOIN rentals r ON bc.copy_id = r.copy_id
+GROUP BY c.category_id, c.name
+ORDER BY rents_amount DESC
+LIMIT 10
+
+-- 16. Overdue rentals
+SELECT 
+    m.name,
+    r.rental_date,
+    r.due_date,
+    r.return_date,
+    (r.return_date - r.due_date) AS delay
+FROM rentals r
+JOIN members m ON r.customer_id = m.customer_id
+WHERE r.return_date > r.due_date
+
+-- 17. Branch performance (rentals count)
+SELECT 
+	b.branch_id,
+	COUNT(r.rental_id) AS rentals_amount,
+	RANK() OVER(ORDER BY COUNT(r.rental_id) DESC) AS rank
+FROM branches b
+JOIN employees e ON b.branch_id = e.branch_id
+JOIN rentals r ON e.employee_id = r.employee_id
+GROUP BY b.branch_id
+
+-- 18. Customer segmentation
+SELECT
+	m.name,
+	COUNT(r.rental_id) AS rentals_amount,
+	CASE
+		WHEN COUNT(r.rental_id) >= 10 THEN 'High Activity'
+		WHEN COUNT(r.rental_id) >= 5 THEN 'Medium Activity'
+		ELSE 'Low Activity'
+	END AS segment
+FROM members m
+LEFT JOIN rentals r ON m.customer_id = r.customer_id
+GROUP BY m.name
+
+-- 19. Percentage of rentals by category
+WITH category_counts AS (
+    SELECT 
+        c.name,
+        COUNT(*) AS rentals_amount
+    FROM rentals r
+    JOIN book_copies bc ON r.copy_id = bc.copy_id
+    JOIN books b ON bc.book_id = b.book_id
+    JOIN categories c ON b.category_id = c.category_id
+    GROUP BY c.name
+)
+SELECT 
+    name,
+    rentals_amount,
+    ROUND(100.0 * rentals_amount / SUM(rentals_amount) OVER (), 2) AS percentage
+FROM category_counts
+
+-- 20. Most recent rental per customer
+SELECT *
+FROM (
+    SELECT 
+        m.name,
+        r.rental_date,
+        ROW_NUMBER() OVER (PARTITION BY m.customer_id ORDER BY r.rental_date DESC) AS recent_rental
+    FROM members m
+    JOIN rentals r ON m.customer_id = r.customer_id
+) t
+WHERE recent_rental = 1
