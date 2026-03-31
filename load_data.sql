@@ -158,3 +158,45 @@ CROSS JOIN LATERAL (
 CROSS JOIN LATERAL (
     SELECT copy_id FROM book_copies ORDER BY RANDOM() LIMIT 1
 ) bc;
+
+
+-- Added Employees
+INSERT INTO employees (name, position, salary, branch_id) VALUES
+('Alice Smith', 'Librarian', 55000, 1),
+('Bob Johnson', 'Assistant', 40000, 1),
+('Carol Davis', 'Librarian', 60000, 2),
+('David Wilson', 'Assistant', 42000, 2),
+('Eve Thompson', 'Manager', 75000, 3);
+
+-- Added Customers
+INSERT INTO members (name, registration_date) 
+SELECT 
+    'Member ' || gs,
+    CURRENT_DATE - (RANDOM() * 1000)::int
+FROM generate_series(1, 200) gs;
+
+-- Added Book Copies
+INSERT INTO book_copies (book_id) 
+SELECT book_id
+FROM books, generate_series(1, 10) gs;
+
+
+-- Added Rentals
+
+INSERT INTO rentals (customer_id, copy_id, rental_date, due_date, return_date)
+SELECT
+    (SELECT customer_id FROM members ORDER BY RANDOM() LIMIT 1) AS customer_id,
+    bc.copy_id,
+    CURRENT_DATE - (RANDOM() * 365)::int AS rental_date,
+    CURRENT_DATE - (RANDOM() * 365)::int + 14 AS due_date,
+    CASE 
+        WHEN RANDOM() > 0.3 THEN CURRENT_DATE - (RANDOM() * 365)::int + 10
+        ELSE NULL
+    END AS return_date
+FROM book_copies bc
+JOIN books b ON bc.book_id = b.book_id
+JOIN generate_series(1, CASE 
+    WHEN b.title = 'The Histories' THEN 1000
+    WHEN b.title = 'A People''s History of the United States' THEN 300
+    ELSE 50
+END) gs(i) ON TRUE;
