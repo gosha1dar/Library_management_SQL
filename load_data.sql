@@ -138,3 +138,23 @@ FROM staging_issue_status i
 JOIN members m ON i.Issued_cust = m.name
 LEFT JOIN staging_return_status r ON i.Issue_id = r.Return_id;
 
+-- Generate sample rentals data
+
+INSERT INTO rentals (customer_id, copy_id, rental_date, due_date, return_date)
+SELECT 
+    m.customer_id,
+    bc.copy_id,
+    CURRENT_DATE - (RANDOM() * 365)::int AS rental_date,
+    CURRENT_DATE - (RANDOM() * 365)::int + 14 AS due_date,
+    CASE 
+        WHEN RANDOM() > 0.3 
+        THEN CURRENT_DATE - (RANDOM() * 365)::int + 10
+        ELSE NULL
+    END AS return_date
+FROM generate_series(1, 300)
+CROSS JOIN LATERAL (
+    SELECT customer_id FROM members ORDER BY RANDOM() LIMIT 1
+) m
+CROSS JOIN LATERAL (
+    SELECT copy_id FROM book_copies ORDER BY RANDOM() LIMIT 1
+) bc;
