@@ -200,3 +200,31 @@ JOIN generate_series(1, CASE
     WHEN b.title = 'A People''s History of the United States' THEN 300
     ELSE 50
 END) gs(i) ON TRUE;
+
+-- Clean rentals before reloading sample data
+TRUNCATE TABLE penalties, rentals RESTART IDENTITY CASCADE;
+
+-- Generate sample rentals data
+INSERT INTO rentals (customer_id, copy_id, rental_date, due_date, return_date)
+SELECT
+    m.customer_id,
+    bc.copy_id,
+    CURRENT_DATE - (RANDOM() * 365)::int,
+    CURRENT_DATE - (RANDOM() * 365)::int + 14,
+    CASE
+        WHEN RANDOM() < 0.2 THEN NULL
+        ELSE CURRENT_DATE - (RANDOM() * 365)::int + 7
+    END
+FROM generate_series(1, 5000) gs
+JOIN LATERAL (
+    SELECT customer_id
+    FROM members
+    ORDER BY RANDOM()
+    LIMIT 1
+) m ON TRUE
+JOIN LATERAL (
+    SELECT copy_id
+    FROM book_copies
+    ORDER BY RANDOM()
+    LIMIT 1
+) bc ON TRUE;
