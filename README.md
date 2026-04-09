@@ -25,13 +25,13 @@ It includes:
 ## Power BI Dashboard
 
 ### Overview
-![Overview](powerbi/screenshots/overview.png)
+![Overview](powerbi/screenshots/overview.jpg)
 
 ### Customer Insights
-![Customer Insights](powerbi/screenshots/customer_insights.png)
+![Customer Insights](powerbi/screenshots/customer_insights.jpg)
 
 ### Operations
-![Operations](powerbi/screenshots/operations.png)
+![Operations](powerbi/screenshots/operations.jpg)
 
 The dashboard includes:
 
